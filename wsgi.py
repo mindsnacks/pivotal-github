@@ -3,13 +3,17 @@ import jinja2
 import json
 import os
 import re
-
+from xml.sax.saxutils import escape
 BASE_PATH = os.path.dirname(__file__)
+def guess_autoescape(template_name):
+    if template_name is None or '.' not in template_name:
+        return False
+    ext = template_name.rsplit('.', 1)[1]
+    return ext in ('html', 'htm', 'xml')
 CONFIG = json.load(open(os.path.join(BASE_PATH, "config.json")))
-
 templates = jinja2.Environment(loader=jinja2.FileSystemLoader(
     os.path.join(BASE_PATH, 'templates')
-))
+),autoescape=guess_autoescape,extensions=['jinja2.ext.autoescape'])
 
 def grab_open_issues():
     gh = GitHub()
@@ -17,8 +21,10 @@ def grab_open_issues():
 
 def display_github_issues(environ, start_response):
     template = templates.get_template("pivotal.xml")
-    start_response(200, [('Content-Type', 'application/xml')])
-    return [template.render({"issues": grab_open_issues()['issues']})]
+    start_response("200", [('Content-Type', 'application/xml')])
+    issues = json.loads(grab_open_issues())
+    output = template.render({"issues": issues['issues']}) 
+    return [output]
 
 
 CHECK_FOR_GITHUB_REGEX = re.compile("<other_url>http://github.com/%s/%s/issues/\d+</other_url>" % (
@@ -58,7 +64,7 @@ def do_issue(id, type):
         type),
         CONFIG['github_user']),
         CONFIG['github_repo']),
-	id).POST(login=CONFIG['github_user'], token=CONFIG['github_apikey'])
+    id).POST(login=CONFIG['github_user'], token=CONFIG['github_apikey'])
 
 def reopen_issue(id):
     return do_issue(id, 'reopen')
@@ -71,7 +77,7 @@ def update_github(environ, start_response):
     matches = OTHER_ID_REGEX.search(pivotal).groups()
     on_github = CHECK_FOR_GITHUB_REGEX.search(pivotal) != None
     if len(matches) != 1 or not on_github:
-        start_response(404, [])
+        start_response("404", [])
         return []
 
     issue_id = matches[0]
@@ -95,12 +101,13 @@ def update_github(environ, start_response):
             if issue['state'] == "closed":
                 reopen_issue(issue_id)
 
-    start_response(202, [])
+    start_response("202", [])
     return []
 
 def application(environ, start_response):
     if environ['REQUEST_METHOD'] == 'POST':
         return update_github(environ, start_response)
     else:
-        return display_github_issues(environ, start_response)
+        result = display_github_issues(environ, start_response)
+        return result
 
