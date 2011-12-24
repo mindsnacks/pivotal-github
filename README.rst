@@ -2,6 +2,7 @@ pivotal-github
 ==============
 WSGI bridge between `Pivotal Tracker`_ and `GitHub`_.
 
+**This fork is hacked up work in progress. I wouldn't recommend it**
 
 Pivotal Tracker allows any external source to be imported into its excellent
 tracker for schedule tasks.  GitHub exposes their Issues via a JSON API so you
