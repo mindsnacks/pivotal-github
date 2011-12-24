@@ -1,4 +1,5 @@
-gunicorn
--e git://github.com/tswicegood/Dolt.git#egg=dolt
-httplib2
-jinja2
+Jinja2==2.6
+gunicorn==0.13.4
+httplib2==0.7.2
+requests==0.8.6
+wsgiref==0.1.2
